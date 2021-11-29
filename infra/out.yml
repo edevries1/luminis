@@ -1,0 +1,48 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Resources:
+  InputBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: mt940bucket
+    DeletionPolicy: Retain
+    NotificationConfiguration:
+      LambdaConfigurations:
+      - Event: s3:ObjectCreated:*
+        Filter:
+          S3Key:
+            Rules:
+            - Name: prefix
+              Value: incoming/
+        Function:
+          Fn::GetAtt:
+          - LambdaFunc
+          - Arn
+  LambdaFunc:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: s3://mt940data/a33f097974bd292ac17a2eb885c99557
+      Handler: eu.luminis.Handler::handleRequest
+      Runtime: java11
+      Description: Java function
+      MemorySize: 512
+      Timeout: 30
+      Policies:
+      - AWSLambdaBasicExecutionRole
+      - AWSLambda_ReadOnlyAccess
+      - AWSXrayWriteOnlyAccess
+      - AWSLambdaVPCAccessExecutionRole
+      - AmazonS3FullAccess
+      Tracing: Active
+      Events:
+        s3Notification:
+          Type: S3
+          Properties:
+            Bucket:
+              Ref: InputBucket
+            Events: s3:ObjectCreated:*
+            Filter:
+              S3Key:
+                Rules:
+                - Name: prefix
+                  Value: incoming/
